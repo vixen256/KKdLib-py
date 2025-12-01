@@ -257,22 +257,30 @@ py_txp_set_add_texture_data (pyobject_txp_set *self, PyObject *args) {
 
 /*
 Not actually implemented until C++26, lol
+const char python_bcn_encode[] = {
+#embed "bcn_encode.py"
+};
+
 const char python_bc5_encode[] = {
 #embed "bc5_encode.py"
 };
 */
+const char *python_bcn_encode = "import PIL\nimport io\nbuffer = io.BytesIO ()\nPIL.ImageFile._save (image, buffer, [PIL.ImageFile._Tile (\"bcn\", "
+                                "(0, 0) + (width, height), 0, (n, ))])\nresult = buffer.getvalue ()";
+
 const char *python_bc5_encode =
-    "import PIL\nimport io\nsize =(width, height)\ncbcr_size =(int (width / 2), int (height / 2))\nya_image = PIL.Image.frombytes (\"RGB\", size, "
+    "import PIL\nimport io\nsize = (width, height)\ncbcr_size = (int (width / 2), int (height / 2))\nya_image = PIL.Image.frombytes (\"RGB\", size, "
     "bytes (ya_data))\nya_buffer = io.BytesIO ()\nPIL.ImageFile._save (ya_image, ya_buffer, [PIL.ImageFile._Tile (\"bcn\", (0, 0) + size, 0, (5, "
     "))])\ncbcr_image = PIL.Image.frombytes (\"RGB\", size, bytes (cbcr_data))\ncbcr_buffer = io.BytesIO ()\nresized_image = cbcr_image.resize "
     "(cbcr_size, PIL.Image.Resampling.LANCZOS)\nPIL.ImageFile._save (resized_image, cbcr_buffer, [PIL.ImageFile._Tile (\"bcn\", (0, 0) + cbcr_size, "
     "0, (5, ))])\nya_result = ya_buffer.getvalue ()\ncbcr_result = cbcr_buffer.getvalue () ";
 
 static PyObject *
-py_txp_set_add_texture_pillow_bc5 (pyobject_txp_set *self, PyObject *args) {
+py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 	const char *name;
 	PyObject *image;
-	if (!PyArg_ParseTuple (args, "sO", &name, &image)) return nullptr;
+	const char *format = "ATI2";
+	if (!PyArg_ParseTuple (args, "sO|s", &name, &image, &format)) return nullptr;
 
 	PyObject *width  = PyObject_GetAttrString (image, "width");
 	PyObject *height = PyObject_GetAttrString (image, "height");
@@ -287,26 +295,276 @@ py_txp_set_add_texture_pillow_bc5 (pyobject_txp_set *self, PyObject *args) {
 		PyErr_SetString (PyExc_RuntimeError, "Could not call image.getdata");
 		return nullptr;
 	}
-	PyObject *ya_data   = PyList_New (PyLong_AsLong (width) * PyLong_AsLong (height) * 3);
-	PyObject *cbcr_data = PyList_New (PyLong_AsLong (width) * PyLong_AsLong (height) * 3);
 
-	PyObject *iter = PyObject_GetIter (image_data);
-	if (!iter) return nullptr;
+	txp texture;
 
-	const __m128 matrix_y  = {0.212593317f, 0.715214610f, 0.0721921176f, 1.0f};
-	const __m128 matrix_cb = {-0.114568502f, -0.385435730f, 0.5000042320f, 1.0f};
-	const __m128 matrix_cr = {0.500004232f, -0.454162151f, -0.0458420813f, 1.0f};
+	if (strcmp (format, "RGB") == 0 || strcmp (format, "RGBA") == 0) {
+		txp_mipmap mipmap;
+		mipmap.width  = PyLong_AsLong (width);
+		mipmap.height = PyLong_AsLong (height);
 
-	PyObject *bytes = PyUnicode_AsUTF8String (mode);
-	if (strcmp (PyBytes_AsString (bytes), "RGBA") == 0) {
-		u64 i = 0;
-		while (PyObject *item = PyIter_Next (iter)) {
-			f32 r = PyLong_AsLong (PyTuple_GetItem (item, 0));
-			f32 g = PyLong_AsLong (PyTuple_GetItem (item, 1));
-			f32 b = PyLong_AsLong (PyTuple_GetItem (item, 2));
-			u8 a  = PyLong_AsLong (PyTuple_GetItem (item, 3));
+		PyObject *iter = PyObject_GetIter (image_data);
+		if (!iter) return nullptr;
 
-			if (a > 0) {
+		u64 i           = 0;
+		PyObject *bytes = PyUnicode_AsUTF8String (mode);
+		if (strcmp (PyBytes_AsString (bytes), "RGB") == 0) {
+			mipmap.format = TXP_RGB8;
+			mipmap.size   = mipmap.get_size ();
+			mipmap.data.resize (mipmap.size);
+
+			while (PyObject *item = PyIter_Next (iter)) {
+				u8 r = PyLong_AsLong (PyTuple_GetItem (item, 0));
+				u8 g = PyLong_AsLong (PyTuple_GetItem (item, 1));
+				u8 b = PyLong_AsLong (PyTuple_GetItem (item, 2));
+
+				mipmap.data[i * 3 + 0] = r;
+				mipmap.data[i * 3 + 1] = g;
+				mipmap.data[i * 3 + 2] = b;
+
+				i++;
+				Py_DECREF (item);
+			}
+		} else if (strcmp (PyBytes_AsString (bytes), "RGBA") == 0) {
+			mipmap.format = TXP_RGBA8;
+			mipmap.size   = mipmap.get_size ();
+			mipmap.data.resize (mipmap.size);
+
+			while (PyObject *item = PyIter_Next (iter)) {
+				u8 r = PyLong_AsLong (PyTuple_GetItem (item, 0));
+				u8 g = PyLong_AsLong (PyTuple_GetItem (item, 1));
+				u8 b = PyLong_AsLong (PyTuple_GetItem (item, 2));
+				u8 a = PyLong_AsLong (PyTuple_GetItem (item, 3));
+
+				mipmap.data[i * 4 + 0] = r;
+				mipmap.data[i * 4 + 1] = g;
+				mipmap.data[i * 4 + 2] = b;
+				mipmap.data[i * 4 + 3] = a;
+
+				i++;
+				Py_DECREF (item);
+			}
+		} else {
+			PyErr_SetString (PyExc_RuntimeError, "Image mode must be RGB or RGBA");
+			return nullptr;
+		}
+
+		texture.has_cube_map  = false;
+		texture.array_size    = 1;
+		texture.mipmaps_count = 1;
+		texture.mipmaps.push_back (mipmap);
+
+		Py_DECREF (bytes);
+		Py_DECREF (iter);
+	} else if (strcmp (format, "BC1") == 0 || strcmp (format, "DXT1") == 0) {
+		PyObject *code = Py_CompileString (python_bcn_encode, "bcn_encode.py", Py_file_input);
+		if (!code) return nullptr;
+
+		PyObject *globals = PyDict_New ();
+		PyObject *locals  = PyDict_New ();
+
+		PyDict_SetItemString (locals, "image", image);
+		PyDict_SetItemString (locals, "width", width);
+		PyDict_SetItemString (locals, "height", height);
+		PyDict_SetItemString (locals, "n", PyLong_FromLong (1));
+
+		PyObject *py_result = PyEval_EvalCode (code, globals, locals);
+		if (!py_result) return nullptr;
+		Py_DECREF (py_result);
+
+		PyObject *result = PyDict_GetItemString (locals, "result");
+
+		if (result == nullptr || !PyBytes_Check (result)) {
+			PyErr_SetString (PyExc_RuntimeError, "BCn encoding failed");
+			return nullptr;
+		}
+
+		txp_mipmap mipmap;
+
+		mipmap.width    = PyLong_AsLong (width);
+		mipmap.height   = PyLong_AsLong (height);
+		PyObject *bytes = PyUnicode_AsUTF8String (mode);
+		if (strcmp (PyBytes_AsString (bytes), "RGB") == 0) mipmap.format = TXP_BC1;
+		else if (strcmp (PyBytes_AsString (bytes), "RGBA") == 0) mipmap.format = TXP_BC1a;
+		else {
+			PyErr_SetString (PyExc_RuntimeError, "Image mode must be RGB or RGBA");
+			return nullptr;
+		}
+
+		if (PyBytes_Size (result) != mipmap.get_size ()) {
+			PyErr_SetString (PyExc_RuntimeError, "Data does not match expected size");
+			return nullptr;
+		}
+
+		mipmap.size = mipmap.get_size ();
+		mipmap.data.resize (mipmap.size);
+		memcpy (mipmap.data.data (), PyBytes_AsString (result), mipmap.size);
+
+		texture.has_cube_map  = false;
+		texture.array_size    = 1;
+		texture.mipmaps_count = 1;
+		texture.mipmaps.push_back (mipmap);
+
+		Py_DECREF (code);
+		Py_DECREF (globals);
+		Py_DECREF (locals);
+	} else if (strcmp (format, "BC2") == 0 || strcmp (format, "DXT3") == 0) {
+		PyObject *code = Py_CompileString (python_bcn_encode, "bcn_encode.py", Py_file_input);
+		if (!code) return nullptr;
+
+		PyObject *globals = PyDict_New ();
+		PyObject *locals  = PyDict_New ();
+
+		PyDict_SetItemString (locals, "image", image);
+		PyDict_SetItemString (locals, "width", width);
+		PyDict_SetItemString (locals, "height", height);
+		PyDict_SetItemString (locals, "n", PyLong_FromLong (2));
+
+		PyObject *py_result = PyEval_EvalCode (code, globals, locals);
+		if (!py_result) return nullptr;
+		Py_DECREF (py_result);
+
+		PyObject *result = PyDict_GetItemString (locals, "result");
+
+		if (result == nullptr || !PyBytes_Check (result)) {
+			PyErr_SetString (PyExc_RuntimeError, "BCn encoding failed");
+			return nullptr;
+		}
+
+		txp_mipmap mipmap;
+
+		mipmap.width  = PyLong_AsLong (width);
+		mipmap.height = PyLong_AsLong (height);
+		mipmap.format = TXP_BC2;
+
+		if (PyBytes_Size (result) != mipmap.get_size ()) {
+			PyErr_SetString (PyExc_RuntimeError, "Data does not match expected size");
+			return nullptr;
+		}
+
+		mipmap.size = mipmap.get_size ();
+		mipmap.data.resize (mipmap.size);
+		memcpy (mipmap.data.data (), PyBytes_AsString (result), mipmap.size);
+
+		texture.has_cube_map  = false;
+		texture.array_size    = 1;
+		texture.mipmaps_count = 1;
+		texture.mipmaps.push_back (mipmap);
+
+		Py_DECREF (code);
+		Py_DECREF (globals);
+		Py_DECREF (locals);
+	} else if (strcmp (format, "BC3") == 0 || strcmp (format, "DXT5") == 0) {
+		PyObject *code = Py_CompileString (python_bcn_encode, "bcn_encode.py", Py_file_input);
+		if (!code) return nullptr;
+
+		PyObject *globals = PyDict_New ();
+		PyObject *locals  = PyDict_New ();
+
+		PyDict_SetItemString (locals, "image", image);
+		PyDict_SetItemString (locals, "width", width);
+		PyDict_SetItemString (locals, "height", height);
+		PyDict_SetItemString (locals, "n", PyLong_FromLong (3));
+
+		PyObject *py_result = PyEval_EvalCode (code, globals, locals);
+		if (!py_result) return nullptr;
+		Py_DECREF (py_result);
+
+		PyObject *result = PyDict_GetItemString (locals, "result");
+
+		if (result == nullptr || !PyBytes_Check (result)) {
+			PyErr_SetString (PyExc_RuntimeError, "BCn encoding failed");
+			return nullptr;
+		}
+
+		txp_mipmap mipmap;
+
+		mipmap.width  = PyLong_AsLong (width);
+		mipmap.height = PyLong_AsLong (height);
+		mipmap.format = TXP_BC3;
+
+		if (PyBytes_Size (result) != mipmap.get_size ()) {
+			PyErr_SetString (PyExc_RuntimeError, "Data does not match expected size");
+			return nullptr;
+		}
+
+		mipmap.size = mipmap.get_size ();
+		mipmap.data.resize (mipmap.size);
+		memcpy (mipmap.data.data (), PyBytes_AsString (result), mipmap.size);
+
+		texture.has_cube_map  = false;
+		texture.array_size    = 1;
+		texture.mipmaps_count = 1;
+		texture.mipmaps.push_back (mipmap);
+
+		Py_DECREF (code);
+		Py_DECREF (globals);
+		Py_DECREF (locals);
+	} else if (strcmp (format, "BC5") == 0 || strcmp (format, "ATI2") == 0) {
+		PyObject *ya_data   = PyList_New (PyLong_AsLong (width) * PyLong_AsLong (height) * 3);
+		PyObject *cbcr_data = PyList_New (PyLong_AsLong (width) * PyLong_AsLong (height) * 3);
+
+		PyObject *iter = PyObject_GetIter (image_data);
+		if (!iter) return nullptr;
+
+		const __m128 matrix_y  = {0.212593317f, 0.715214610f, 0.0721921176f, 1.0f};
+		const __m128 matrix_cb = {-0.114568502f, -0.385435730f, 0.5000042320f, 1.0f};
+		const __m128 matrix_cr = {0.500004232f, -0.454162151f, -0.0458420813f, 1.0f};
+
+		PyObject *bytes = PyUnicode_AsUTF8String (mode);
+		if (strcmp (PyBytes_AsString (bytes), "RGBA") == 0) {
+			u64 i = 0;
+			while (PyObject *item = PyIter_Next (iter)) {
+				f32 r = PyLong_AsLong (PyTuple_GetItem (item, 0));
+				f32 g = PyLong_AsLong (PyTuple_GetItem (item, 1));
+				f32 b = PyLong_AsLong (PyTuple_GetItem (item, 2));
+				u8 a  = PyLong_AsLong (PyTuple_GetItem (item, 3));
+
+				if (a > 0) {
+#ifdef __x86_64__
+					__m128 rgb  = {r, g, b, 128.5};
+					__m128 y    = _mm_mul_ps (rgb, matrix_y);
+					__m128 cb   = _mm_mul_ps (rgb, matrix_cb);
+					__m128 cr   = _mm_mul_ps (rgb, matrix_cr);
+					__m128 cbcr = _mm_hadd_ps (cb, cr);
+
+					PyList_SetItem (ya_data, i * 3 + 0, PyLong_FromLong (y[0] + y[1] + y[2]));
+					PyList_SetItem (ya_data, i * 3 + 1, PyLong_FromLong (a));
+					PyList_SetItem (ya_data, i * 3 + 2, PyLong_FromLong (0));
+					PyList_SetItem (cbcr_data, i * 3 + 0, PyLong_FromLong ((cbcr[0] + cbcr[1]) / 1.003922f));
+					PyList_SetItem (cbcr_data, i * 3 + 1, PyLong_FromLong ((cbcr[2] + cbcr[3]) / 1.003922f));
+					PyList_SetItem (cbcr_data, i * 3 + 2, PyLong_FromLong (0));
+#else
+					f32 y  = r * 0.212593317f + g * 0.715214610f + b * 0.0721921176f;
+					f32 cb = (r * -0.114568502f + g * -0.385435730f + b * 0.5000042320f + 128.5f) / 1.003922f;
+					f32 cr = (r * 0.500004232f + g * -0.454162151f + b * -0.0458420813f + 128.5f) / 1.003922f;
+
+					PyList_SetItem (ya_data, i * 3 + 0, PyLong_FromLong (y));
+					PyList_SetItem (ya_data, i * 3 + 1, PyLong_FromLong (a));
+					PyList_SetItem (ya_data, i * 3 + 2, PyLong_FromLong (0));
+				PyList_SetItem (cbcr_data, i * 3 + 0, PyLong_FromLong (cb);
+				PyList_SetItem (cbcr_data, i * 3 + 1, PyLong_FromLong (cr));
+				PyList_SetItem (cbcr_data, i * 3 + 2, PyLong_FromLong (0));
+#endif
+				} else {
+					PyList_SetItem (ya_data, i * 3 + 0, PyLong_FromLong (0));
+					PyList_SetItem (ya_data, i * 3 + 1, PyLong_FromLong (a));
+					PyList_SetItem (ya_data, i * 3 + 2, PyLong_FromLong (0));
+					PyList_SetItem (cbcr_data, i * 3 + 0, PyLong_FromLong (0));
+					PyList_SetItem (cbcr_data, i * 3 + 1, PyLong_FromLong (0));
+					PyList_SetItem (cbcr_data, i * 3 + 2, PyLong_FromLong (0));
+				}
+
+				i++;
+				Py_DECREF (item);
+			}
+		} else if (strcmp (PyBytes_AsString (bytes), "RGB") == 0) {
+			u64 i = 0;
+			while (PyObject *item = PyIter_Next (iter)) {
+				f32 r = PyLong_AsLong (PyTuple_GetItem (item, 0));
+				f32 g = PyLong_AsLong (PyTuple_GetItem (item, 1));
+				f32 b = PyLong_AsLong (PyTuple_GetItem (item, 2));
+
 #ifdef __x86_64__
 				__m128 rgb  = {r, g, b, 128.5};
 				__m128 y    = _mm_mul_ps (rgb, matrix_y);
@@ -315,7 +573,7 @@ py_txp_set_add_texture_pillow_bc5 (pyobject_txp_set *self, PyObject *args) {
 				__m128 cbcr = _mm_hadd_ps (cb, cr);
 
 				PyList_SetItem (ya_data, i * 3 + 0, PyLong_FromLong (y[0] + y[1] + y[2]));
-				PyList_SetItem (ya_data, i * 3 + 1, PyLong_FromLong (a));
+				PyList_SetItem (ya_data, i * 3 + 1, PyLong_FromLong (255));
 				PyList_SetItem (ya_data, i * 3 + 2, PyLong_FromLong (0));
 				PyList_SetItem (cbcr_data, i * 3 + 0, PyLong_FromLong ((cbcr[0] + cbcr[1]) / 1.003922f));
 				PyList_SetItem (cbcr_data, i * 3 + 1, PyLong_FromLong ((cbcr[2] + cbcr[3]) / 1.003922f));
@@ -326,124 +584,90 @@ py_txp_set_add_texture_pillow_bc5 (pyobject_txp_set *self, PyObject *args) {
 				f32 cr = (r * 0.500004232f + g * -0.454162151f + b * -0.0458420813f + 128.5f) / 1.003922f;
 
 				PyList_SetItem (ya_data, i * 3 + 0, PyLong_FromLong (y));
-				PyList_SetItem (ya_data, i * 3 + 1, PyLong_FromLong (a));
+				PyList_SetItem (ya_data, i * 3 + 1, PyLong_FromLong (255));
 				PyList_SetItem (ya_data, i * 3 + 2, PyLong_FromLong (0));
-				PyList_SetItem (cbcr_data, i * 3 + 0, PyLong_FromLong (cb);
-				PyList_SetItem (cbcr_data, i * 3 + 1, PyLong_FromLong (cr));
-				PyList_SetItem (cbcr_data, i * 3 + 2, PyLong_FromLong (0));
-#endif
-			} else {
-				PyList_SetItem (ya_data, i * 3 + 0, PyLong_FromLong (0));
-				PyList_SetItem (ya_data, i * 3 + 1, PyLong_FromLong (a));
-				PyList_SetItem (ya_data, i * 3 + 2, PyLong_FromLong (0));
-				PyList_SetItem (cbcr_data, i * 3 + 0, PyLong_FromLong (0));
-				PyList_SetItem (cbcr_data, i * 3 + 1, PyLong_FromLong (0));
-				PyList_SetItem (cbcr_data, i * 3 + 2, PyLong_FromLong (0));
-			}
-
-			i++;
-			Py_DECREF (item);
-		}
-	} else if (strcmp (PyBytes_AsString (bytes), "RGB") == 0) {
-		u64 i = 0;
-		while (PyObject *item = PyIter_Next (iter)) {
-			f32 r = PyLong_AsLong (PyTuple_GetItem (item, 0));
-			f32 g = PyLong_AsLong (PyTuple_GetItem (item, 1));
-			f32 b = PyLong_AsLong (PyTuple_GetItem (item, 2));
-
-#ifdef __x86_64__
-			__m128 rgb  = {r, g, b, 128.5};
-			__m128 y    = _mm_mul_ps (rgb, matrix_y);
-			__m128 cb   = _mm_mul_ps (rgb, matrix_cb);
-			__m128 cr   = _mm_mul_ps (rgb, matrix_cr);
-			__m128 cbcr = _mm_hadd_ps (cb, cr);
-
-			PyList_SetItem (ya_data, i * 3 + 0, PyLong_FromLong (y[0] + y[1] + y[2]));
-			PyList_SetItem (ya_data, i * 3 + 1, PyLong_FromLong (255));
-			PyList_SetItem (ya_data, i * 3 + 2, PyLong_FromLong (0));
-			PyList_SetItem (cbcr_data, i * 3 + 0, PyLong_FromLong ((cbcr[0] + cbcr[1]) / 1.003922f));
-			PyList_SetItem (cbcr_data, i * 3 + 1, PyLong_FromLong ((cbcr[2] + cbcr[3]) / 1.003922f));
-			PyList_SetItem (cbcr_data, i * 3 + 2, PyLong_FromLong (0));
-#else
-			f32 y  = r * 0.212593317f + g * 0.715214610f + b * 0.0721921176f;
-			f32 cb = (r * -0.114568502f + g * -0.385435730f + b * 0.5000042320f + 128.5f) / 1.003922f;
-			f32 cr = (r * 0.500004232f + g * -0.454162151f + b * -0.0458420813f + 128.5f) / 1.003922f;
-
-			PyList_SetItem (ya_data, i * 3 + 0, PyLong_FromLong (y));
-			PyList_SetItem (ya_data, i * 3 + 1, PyLong_FromLong (255));
-			PyList_SetItem (ya_data, i * 3 + 2, PyLong_FromLong (0));
 			PyList_SetItem (cbcr_data, i * 3 + 0, PyLong_FromLong (cb);
 			PyList_SetItem (cbcr_data, i * 3 + 1, PyLong_FromLong (cr));
 			PyList_SetItem (cbcr_data, i * 3 + 2, PyLong_FromLong (0));
 #endif
 
-			i++;
-			Py_DECREF (item);
+				i++;
+				Py_DECREF (item);
+			}
+		} else {
+			PyErr_SetString (PyExc_RuntimeError, "Image mode must be RGB or RGBA");
+			return nullptr;
 		}
+		Py_DECREF (bytes);
+
+		PyObject *code = Py_CompileString (python_bc5_encode, "bc5_encode.py", Py_file_input);
+		if (!code) return nullptr;
+
+		PyObject *globals = PyDict_New ();
+		PyObject *locals  = PyDict_New ();
+
+		PyDict_SetItemString (locals, "ya_data", ya_data);
+		PyDict_SetItemString (locals, "cbcr_data", cbcr_data);
+		PyDict_SetItemString (locals, "width", width);
+		PyDict_SetItemString (locals, "height", height);
+
+		PyObject *result = PyEval_EvalCode (code, globals, locals);
+		if (!result) return nullptr;
+		Py_DECREF (result);
+
+		PyObject *ya_result   = PyDict_GetItemString (locals, "ya_result");
+		PyObject *cbcr_result = PyDict_GetItemString (locals, "cbcr_result");
+
+		if (ya_result == nullptr || cbcr_result == nullptr || !PyBytes_Check (ya_result) || !PyBytes_Check (cbcr_result)) {
+			PyErr_SetString (PyExc_RuntimeError, "YCbCr encoding failed");
+			return nullptr;
+		}
+
+		txp_mipmap ya_mipmap;
+		txp_mipmap cbcr_mipmap;
+
+		ya_mipmap.width  = PyLong_AsLong (width);
+		ya_mipmap.height = PyLong_AsLong (height);
+		ya_mipmap.format = TXP_BC5;
+
+		if (PyBytes_Size (ya_result) != ya_mipmap.get_size ()) {
+			PyErr_SetString (PyExc_RuntimeError, "Data does not match expected size");
+			return nullptr;
+		}
+
+		ya_mipmap.size = ya_mipmap.get_size ();
+		ya_mipmap.data.resize (ya_mipmap.size);
+		memcpy (ya_mipmap.data.data (), PyBytes_AsString (ya_result), ya_mipmap.size);
+
+		cbcr_mipmap.width  = PyLong_AsLong (width) / 2;
+		cbcr_mipmap.height = PyLong_AsLong (height) / 2;
+		cbcr_mipmap.format = TXP_BC5;
+
+		if (PyBytes_Size (cbcr_result) != cbcr_mipmap.get_size ()) {
+			PyErr_SetString (PyExc_RuntimeError, "Data does not match expected size");
+			return nullptr;
+		}
+
+		cbcr_mipmap.size = cbcr_mipmap.get_size ();
+		cbcr_mipmap.data.resize (cbcr_mipmap.size);
+		memcpy (cbcr_mipmap.data.data (), PyBytes_AsString (cbcr_result), cbcr_mipmap.size);
+
+		texture.has_cube_map  = false;
+		texture.array_size    = 1;
+		texture.mipmaps_count = 2;
+		texture.mipmaps.push_back (ya_mipmap);
+		texture.mipmaps.push_back (cbcr_mipmap);
+
+		Py_DECREF (iter);
+		Py_DECREF (ya_data);
+		Py_DECREF (cbcr_data);
+		Py_DECREF (code);
+		Py_DECREF (globals);
+		Py_DECREF (locals);
 	} else {
-		PyErr_SetString (PyExc_RuntimeError, "Image mode must be RGB or RGBA");
+		PyErr_SetString (PyExc_RuntimeError, "Unknown pixel format");
 		return nullptr;
 	}
-	Py_DECREF (bytes);
-
-	PyObject *code = Py_CompileString (python_bc5_encode, "bc5_encode.py", Py_file_input);
-	if (!code) return nullptr;
-
-	PyObject *globals = PyDict_New ();
-	PyObject *locals  = PyDict_New ();
-
-	PyDict_SetItemString (locals, "ya_data", ya_data);
-	PyDict_SetItemString (locals, "cbcr_data", cbcr_data);
-	PyDict_SetItemString (locals, "width", width);
-	PyDict_SetItemString (locals, "height", height);
-
-	PyObject *result = PyEval_EvalCode (code, globals, locals);
-	if (!result) return nullptr;
-	Py_DECREF (result);
-
-	PyObject *ya_result   = PyDict_GetItemString (locals, "ya_result");
-	PyObject *cbcr_result = PyDict_GetItemString (locals, "cbcr_result");
-
-	if (ya_result == nullptr || cbcr_result == nullptr || !PyBytes_Check (ya_result) || !PyBytes_Check (cbcr_result)) {
-		PyErr_SetString (PyExc_RuntimeError, "YCbCr encoding failed");
-		return nullptr;
-	}
-
-	txp_mipmap ya_mipmap;
-	txp_mipmap cbcr_mipmap;
-	txp texture;
-
-	ya_mipmap.width  = PyLong_AsLong (width);
-	ya_mipmap.height = PyLong_AsLong (height);
-	ya_mipmap.format = TXP_BC5;
-
-	if (PyBytes_Size (ya_result) != ya_mipmap.get_size ()) {
-		PyErr_SetString (PyExc_RuntimeError, "Data does not match expected size");
-		return nullptr;
-	}
-
-	ya_mipmap.size = ya_mipmap.get_size ();
-	ya_mipmap.data.resize (ya_mipmap.size);
-	memcpy (ya_mipmap.data.data (), PyBytes_AsString (ya_result), ya_mipmap.size);
-
-	cbcr_mipmap.width  = PyLong_AsLong (width) / 2;
-	cbcr_mipmap.height = PyLong_AsLong (height) / 2;
-	cbcr_mipmap.format = TXP_BC5;
-
-	if (PyBytes_Size (cbcr_result) != cbcr_mipmap.get_size ()) {
-		PyErr_SetString (PyExc_RuntimeError, "Data does not match expected size");
-		return nullptr;
-	}
-
-	cbcr_mipmap.size = cbcr_mipmap.get_size ();
-	cbcr_mipmap.data.resize (cbcr_mipmap.size);
-	memcpy (cbcr_mipmap.data.data (), PyBytes_AsString (cbcr_result), cbcr_mipmap.size);
-
-	texture.has_cube_map  = false;
-	texture.array_size    = 1;
-	texture.mipmaps_count = 2;
-	texture.mipmaps.push_back (ya_mipmap);
-	texture.mipmaps.push_back (cbcr_mipmap);
 
 	self->real->textures.push_back (texture);
 	self->names->push_back (std::string (name));
@@ -451,12 +675,6 @@ py_txp_set_add_texture_pillow_bc5 (pyobject_txp_set *self, PyObject *args) {
 	Py_DECREF (width);
 	Py_DECREF (height);
 	Py_DECREF (mode);
-	Py_DECREF (iter);
-	Py_DECREF (ya_data);
-	Py_DECREF (cbcr_data);
-	Py_DECREF (code);
-	Py_DECREF (globals);
-	Py_DECREF (locals);
 
 	Py_RETURN_NONE;
 }
@@ -476,7 +694,8 @@ py_txp_set_get_texture_id (pyobject_txp_set *self, PyObject *args) {
 static PyMethodDef pymethods_txp_set[] = {
     {"add_texture_data", (PyCFunction)py_txp_set_add_texture_data, METH_VARARGS,
      "Add textures to set (name, width, height, format: [RGB, RGBA, BC1/DXT1, BC2/DXT3, BC3/DXT5], data)"},
-    {"add_texture_pillow", (PyCFunction)py_txp_set_add_texture_pillow_bc5, METH_VARARGS, "Add a texture from pillow (name, image)"},
+    {"add_texture_pillow", (PyCFunction)py_txp_set_add_texture_pillow, METH_VARARGS,
+     "Add a texture from pillow (name, image, compression: [RGB/RGBA, BC1/DXT1, BC2/DXT3, BC3/DXT5, BC5/ATI2]])"},
     {"get_texture_id", (PyCFunction)py_txp_set_get_texture_id, METH_VARARGS, "Get the id for a texture (name)"},
     {nullptr}};
 

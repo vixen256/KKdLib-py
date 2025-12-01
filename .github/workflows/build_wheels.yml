@@ -8,8 +8,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # TODO: FIX KKdLib to work with ARM cpus
-        os: [ubuntu-latest, windows-latest, macos-15-intel]
+        # TODO: FIX KKdLib to work with macos intel and arm
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v5
