@@ -1,6 +1,6 @@
 project('KKdLib', 'cpp', version: '0.1')
 warning_level = 3
-cpp_std = 'c++17'
+cpp_std = 'c++26'
 optimization = 3
 b_lto = true
 b_pgo = 'use'
@@ -38,5 +38,6 @@ py.extension_module(
 	cpp_pch: 'src/helpers.h',
 	sources : [
 		'src/main.cpp',
-	]
+	],
+	install: true,
 )

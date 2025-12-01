@@ -262,11 +262,11 @@ const char python_bc5_encode[] = {
 };
 */
 const char *python_bc5_encode =
-    "import PIL\nimport io\nsize =(width, height)\ncbcr_size =(int (width / 2), int (height / 2))\nya_image = PIL.Image.frombytes (\"RGB\""
-    ", size, bytes (ya_data))\nya_buffer = io.BytesIO ()\nPIL.ImageFile._save (ya_image, ya_buffer, [PIL.ImageFile._Tile (\"bcn\""
-    ", (0, 0) + size, 0, (5, ))])\ncbcr_image = PIL.Image.frombytes (\"RGB\", size, bytes (cbcr_data))\ncbcr_buffer = io.BytesIO ()\nresized_image = "
-    "cbcr_image.resize (cbcr_size, PIL.Image.Resampling.LANCZOS)\nPIL.ImageFile._save (resized_image, cbcr_buffer, [PIL.ImageFile._Tile (\"bcn\""
-    ", (0, 0) + cbcr_size, 0, (5, ))])\nya_result = ya_buffer.getvalue ()\ncbcr_result = cbcr_buffer.getvalue () ";
+    "import PIL\nimport io\nsize =(width, height)\ncbcr_size =(int (width / 2), int (height / 2))\nya_image = PIL.Image.frombytes (\"RGB\", size, "
+    "bytes (ya_data))\nya_buffer = io.BytesIO ()\nPIL.ImageFile._save (ya_image, ya_buffer, [PIL.ImageFile._Tile (\"bcn\", (0, 0) + size, 0, (5, "
+    "))])\ncbcr_image = PIL.Image.frombytes (\"RGB\", size, bytes (cbcr_data))\ncbcr_buffer = io.BytesIO ()\nresized_image = cbcr_image.resize "
+    "(cbcr_size, PIL.Image.Resampling.LANCZOS)\nPIL.ImageFile._save (resized_image, cbcr_buffer, [PIL.ImageFile._Tile (\"bcn\", (0, 0) + cbcr_size, "
+    "0, (5, ))])\nya_result = ya_buffer.getvalue ()\ncbcr_result = cbcr_buffer.getvalue () ";
 
 static PyObject *
 py_txp_set_add_texture_pillow_bc5 (pyobject_txp_set *self, PyObject *args) {
