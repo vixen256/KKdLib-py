@@ -6,3 +6,6 @@ build-backend = "mesonpy"
 name = "KKdLib"
 version = "0.1"
 requires-python = ">= 3.10"
+
+[tool.meson-python.args]
+install = ['--skip-subprojects']
