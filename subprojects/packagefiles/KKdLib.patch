@@ -1,0 +1,61 @@
++++ KKdLib/meson.build
+@@ -0,0 +1,59 @@
++project('KKdLib', 'cpp', version: '1.0.0')
++
++cpp = meson.get_compiler('cpp')
++
++add_project_arguments(
++	cpp.get_supported_arguments('-march=skylake'),
++	language: 'cpp',
++)
++
++KKdLib_inc = include_directories('.')
++KKdLib_lib = static_library(
++	'KKdLib',
++	include_directories: KKdLib_inc,
++	sources: [
++		'database/sprite.cpp',
++		'f2/enrs.cpp',
++		'f2/header.cpp',
++		'f2/pof.cpp',
++		'f2/struct.cpp',
++		'io/file_stream.cpp',
++		'io/memory_stream.cpp',
++		'io/path.cpp',
++		'io/stream.cpp',
++		'prj/stack_allocator.cpp',
++		'prj/time.cpp',
++		'aes.cpp',
++		'default.cpp',
++		'deflate.cpp',
++		'divafile.cpp',
++		'farc.cpp',
++		'half_t.cpp',
++		'hash.cpp',
++		'image.cpp',
++		'interpolation.cpp',
++		'key_val.cpp',
++		'kf.cpp',
++		'mat.cpp',
++		'quat.cpp',
++		'sort.cpp',
++		'spr.cpp',
++		'str_utils.cpp',
++		'time.cpp',
++		'txp.cpp',
++		'vec.cpp',
++	],
++	dependencies: [
++		dependency('libxxhash'),
++		dependency('libdeflate'),
++	]
++)
++
++KKdLib_dep = declare_dependency(
++	link_with: KKdLib_lib,
++	include_directories: KKdLib_inc,
++	dependencies: [
++		dependency('libxxhash'),
++		dependency('libdeflate'),
++	]
++)

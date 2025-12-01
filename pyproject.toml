@@ -1,0 +1,8 @@
+[build-system]
+requires = ["meson-python"]
+build-backend = "mesonpy"
+
+[project]
+name = "KKdLib"
+version = "0.1"
+requires-python = ">= 3.10"
