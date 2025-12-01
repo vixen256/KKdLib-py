@@ -10,7 +10,7 @@ cpp = meson.get_compiler('cpp')
 add_project_arguments(
 	cpp.get_supported_arguments(
 		'-DPy_LIMITED_API=0x030A0000',
-		'-std=c++17',
+		'-std=c++26',
 		'-march=skylake',
 		'-O3',
 	),
@@ -20,7 +20,7 @@ add_project_arguments(
 add_project_link_arguments(
 	cpp.get_supported_arguments(
 		'-s',
-		'-std=c++17',
+		'-std=c++26',
 		'-O3',
 	),
 	language: 'cpp',

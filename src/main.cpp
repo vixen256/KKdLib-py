@@ -89,7 +89,7 @@ static int
 py_farc_init (pyobject_farc *self, PyObject *args, PyObject *kwds) {
 	const char *signature = "FArC";
 	bool ft               = true;
-	const char *kwlist[]  = {"signature", "ft", nullptr};
+	char *kwlist[]        = {"signature", "ft", nullptr};
 	if (!PyArg_ParseTupleAndKeywords (args, kwds, "|sb", kwlist, &signature, &ft)) return -1;
 
 	self->real = new farc;
@@ -298,6 +298,7 @@ py_txp_set_add_texture_pillow_bc5 (pyobject_txp_set *self, PyObject *args) {
 			u8 a  = PyLong_AsLong (PyTuple_GetItem (item, 3));
 
 			if (a > 0) {
+#ifdef __x86_64__
 				__m128 rgb  = {r, g, b, 128.5};
 				__m128 y    = _mm_mul_ps (rgb, matrix_y);
 				__m128 cb   = _mm_mul_ps (rgb, matrix_cb);
@@ -310,6 +311,18 @@ py_txp_set_add_texture_pillow_bc5 (pyobject_txp_set *self, PyObject *args) {
 				PyList_SetItem (cbcr_data, i * 3 + 0, PyLong_FromLong ((cbcr[0] + cbcr[1]) / 1.003922f));
 				PyList_SetItem (cbcr_data, i * 3 + 1, PyLong_FromLong ((cbcr[2] + cbcr[3]) / 1.003922f));
 				PyList_SetItem (cbcr_data, i * 3 + 2, PyLong_FromLong (0));
+#else
+				f32 y  = r * 0.212593317f + g * 0.715214610f + b * 0.0721921176f;
+				f32 cb = (r * -0.114568502f + g * -0.385435730f + b * 0.5000042320f + 128.5f) / 1.003922f;
+				f32 cr = (r * 0.500004232f + g * -0.454162151f + b * -0.0458420813f + 128.5f) / 1.003922f;
+
+				PyList_SetItem (ya_data, i * 3 + 0, PyLong_FromLong (y));
+				PyList_SetItem (ya_data, i * 3 + 1, PyLong_FromLong (a));
+				PyList_SetItem (ya_data, i * 3 + 2, PyLong_FromLong (0));
+				PyList_SetItem (cbcr_data, i * 3 + 0, PyLong_FromLong (cb);
+				PyList_SetItem (cbcr_data, i * 3 + 1, PyLong_FromLong (cr));
+				PyList_SetItem (cbcr_data, i * 3 + 2, PyLong_FromLong (0));
+#endif
 			} else {
 				PyList_SetItem (ya_data, i * 3 + 0, PyLong_FromLong (0));
 				PyList_SetItem (ya_data, i * 3 + 1, PyLong_FromLong (a));
@@ -329,7 +342,8 @@ py_txp_set_add_texture_pillow_bc5 (pyobject_txp_set *self, PyObject *args) {
 			f32 g = PyLong_AsLong (PyTuple_GetItem (item, 1));
 			f32 b = PyLong_AsLong (PyTuple_GetItem (item, 2));
 
-			__m128 rgb  = {r, g, b, 1.0};
+#ifdef __x86_64__
+			__m128 rgb  = {r, g, b, 128.5};
 			__m128 y    = _mm_mul_ps (rgb, matrix_y);
 			__m128 cb   = _mm_mul_ps (rgb, matrix_cb);
 			__m128 cr   = _mm_mul_ps (rgb, matrix_cr);
@@ -341,6 +355,18 @@ py_txp_set_add_texture_pillow_bc5 (pyobject_txp_set *self, PyObject *args) {
 			PyList_SetItem (cbcr_data, i * 3 + 0, PyLong_FromLong ((cbcr[0] + cbcr[1]) / 1.003922f));
 			PyList_SetItem (cbcr_data, i * 3 + 1, PyLong_FromLong ((cbcr[2] + cbcr[3]) / 1.003922f));
 			PyList_SetItem (cbcr_data, i * 3 + 2, PyLong_FromLong (0));
+#else
+			f32 y  = r * 0.212593317f + g * 0.715214610f + b * 0.0721921176f;
+			f32 cb = (r * -0.114568502f + g * -0.385435730f + b * 0.5000042320f + 128.5f) / 1.003922f;
+			f32 cr = (r * 0.500004232f + g * -0.454162151f + b * -0.0458420813f + 128.5f) / 1.003922f;
+
+			PyList_SetItem (ya_data, i * 3 + 0, PyLong_FromLong (y));
+			PyList_SetItem (ya_data, i * 3 + 1, PyLong_FromLong (255));
+			PyList_SetItem (ya_data, i * 3 + 2, PyLong_FromLong (0));
+			PyList_SetItem (cbcr_data, i * 3 + 0, PyLong_FromLong (cb);
+			PyList_SetItem (cbcr_data, i * 3 + 1, PyLong_FromLong (cr));
+			PyList_SetItem (cbcr_data, i * 3 + 2, PyLong_FromLong (0));
+#endif
 
 			i++;
 			Py_DECREF (item);
@@ -787,16 +813,18 @@ static PyModuleDef KKdLib_module = {
 };
 
 // KKdLib AES requirement
-bool cpu_caps_aes_ni = true;
+bool cpu_caps_aes_ni = false;
 
 PyMODINIT_FUNC
 PyInit_KKdLib () {
+#ifdef __x86_64__
 	u32 cpuid_eax = 1;
 	u32 cpuid_ebx = 0;
 	u32 cpuid_ecx = 0;
 	u32 cpuid_edx = 0;
 	__get_cpuid (1, &cpuid_eax, &cpuid_ebx, &cpuid_ecx, &cpuid_edx);
 	cpu_caps_aes_ni = !!(cpuid_ecx & (1 << 25));
+#endif
 
 	return PyModuleDef_Init (&KKdLib_module);
 }

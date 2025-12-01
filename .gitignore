@@ -2,3 +2,8 @@
 build/
 build-mingw/
 subprojects/KKdLib/
+subprojects/packagecache/
+subprojects/libdeflate/
+subprojects/xxHash-0.8.3/
+subprojects/libdeflate.wrap
+subprojects/xxhash.wrap
