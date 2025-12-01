@@ -7,9 +7,9 @@ struct pyobject_farc_file {
 
 static int
 py_farc_file_init (pyobject_farc_file *self, PyObject *args, PyObject *kwds) {
-	const char *name     = "DEFAULT";
-	PyObject *data       = nullptr;
-	const char *kwlist[] = {"name", "data", nullptr};
+	const char *name = "DEFAULT";
+	PyObject *data   = nullptr;
+	char *kwlist[]   = {"name", "data", nullptr};
 	if (!PyArg_ParseTupleAndKeywords (args, kwds, "|sO!", kwlist, &name, &PyBytes_Type, &data)) return -1;
 	self->real = new farc_file;
 
@@ -593,13 +593,13 @@ static PyGetSetDef pygetsets_sprite_info[] = {
     {nullptr}};
 
 static PyMemberDef pymembers_sprite_info[] = {
-    {"texid", Py_T_UINT, offsetof (pyobject_sprite_info, spr_info) + offsetof (spr::SprInfo, texid), 0, nullptr},
-    {"rotate", Py_T_INT, offsetof (pyobject_sprite_info, spr_info) + offsetof (spr::SprInfo, rotate), 0, nullptr},
-    {"x", Py_T_FLOAT, offsetof (pyobject_sprite_info, spr_info) + offsetof (spr::SprInfo, px), 0, nullptr},
-    {"y", Py_T_FLOAT, offsetof (pyobject_sprite_info, spr_info) + offsetof (spr::SprInfo, py), 0, nullptr},
-    {"width", Py_T_FLOAT, offsetof (pyobject_sprite_info, spr_info) + offsetof (spr::SprInfo, width), 0, nullptr},
-    {"height", Py_T_FLOAT, offsetof (pyobject_sprite_info, spr_info) + offsetof (spr::SprInfo, height), 0, nullptr},
-    {"attr", Py_T_UINT, offsetof (pyobject_sprite_info, spr_data) + offsetof (SpriteData, attr), 0, nullptr},
+    {"texid", T_UINT, offsetof (pyobject_sprite_info, spr_info) + offsetof (spr::SprInfo, texid), 0, nullptr},
+    {"rotate", T_INT, offsetof (pyobject_sprite_info, spr_info) + offsetof (spr::SprInfo, rotate), 0, nullptr},
+    {"x", T_FLOAT, offsetof (pyobject_sprite_info, spr_info) + offsetof (spr::SprInfo, px), 0, nullptr},
+    {"y", T_FLOAT, offsetof (pyobject_sprite_info, spr_info) + offsetof (spr::SprInfo, py), 0, nullptr},
+    {"width", T_FLOAT, offsetof (pyobject_sprite_info, spr_info) + offsetof (spr::SprInfo, width), 0, nullptr},
+    {"height", T_FLOAT, offsetof (pyobject_sprite_info, spr_info) + offsetof (spr::SprInfo, height), 0, nullptr},
+    {"attr", T_UINT, offsetof (pyobject_sprite_info, spr_data) + offsetof (SpriteData, attr), 0, nullptr},
     {nullptr}};
 
 static PyType_Slot pyslots_sprite_info[] = {{Py_tp_init, (void *)py_sprite_info_init},
