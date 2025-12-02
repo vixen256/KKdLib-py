@@ -18,3 +18,4 @@ install = ['--skip-subprojects']
 
 [tool.cibuildwheel]
 build = "cp310-*"
+archs = ["auto64"]

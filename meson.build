@@ -1,4 +1,4 @@
-project('KKdLib', 'cpp', version: '0.1')
+project('KKdLib', 'cpp', version: '0.1', meson_version: '>=1.3')
 warning_level = 3
 cpp_std = 'c++26'
 optimization = 3
