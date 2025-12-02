@@ -1051,7 +1051,7 @@ PyInit_KKdLib () {
 	u32 cpuid_ecx = 0;
 	u32 cpuid_edx = 0;
 	__get_cpuid (1, &cpuid_eax, &cpuid_ebx, &cpuid_ecx, &cpuid_edx);
-	cpu_caps_aes_ni = !!(cpuid_ecx & bit_AESNI);
+	cpu_caps_aes_ni = !!(cpuid_ecx & (1 << 25));
 #endif
 
 	return PyModuleDef_Init (&KKdLib_module);
