@@ -1,9 +1,15 @@
+#ifndef _HELPERS_PCH
+#define _HELPERS_PCH
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <structmember.h>
 
-#include <bits/stdc++.h>
+#if defined(__x86_64__)
 #include <cpuid.h>
+#endif
+
+#include <bits/stdc++.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -71,3 +77,5 @@ typedef double f64;
 #define PYTHON_TYPE_INIT(original_type)                                                     \
 	pytype_##original_type = (PyTypeObject *)PyType_FromSpec (&pytypespec_##original_type); \
 	PyModule_AddObjectRef (m, #original_type, (PyObject *)pytype_##original_type);
+
+#endif
