@@ -1,6 +1,7 @@
 .cache/
 build/
 dist/
+wheelhouse/
 subprojects/KKdLib/
 subprojects/packagecache/
 subprojects/libdeflate/

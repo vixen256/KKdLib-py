@@ -10,5 +10,11 @@ dependencies = [
   "pillow>=11.3.0"
 ]
 
+[tool.meson-python]
+limited-api = true
+
 [tool.meson-python.args]
 install = ['--skip-subprojects']
+
+[tool.cibuildwheel]
+skip = "cp3??t-*"

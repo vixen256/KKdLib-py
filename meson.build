@@ -9,7 +9,6 @@ cpp = meson.get_compiler('cpp')
 
 add_project_arguments(
 	cpp.get_supported_arguments(
-		'-DPy_LIMITED_API=0x030A0000',
 		'-std=c++26',
 		'-march=skylake',
 		'-O3',
@@ -40,4 +39,5 @@ py.extension_module(
 		'src/main.cpp',
 	],
 	install: true,
+	limited_api: '3.10'
 )
