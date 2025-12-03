@@ -36,6 +36,8 @@ py.extension_module(
 	],
 	cpp_pch: 'src/helpers.h',
 	sources : [
+		'src/BC3.cpp',
+		'src/BC5.cpp',
 		'src/main.cpp',
 	],
 	install: true,
