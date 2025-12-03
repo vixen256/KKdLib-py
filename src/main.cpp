@@ -145,6 +145,7 @@ py_farc_write (pyobject_farc *self, PyObject *args) {
 	const char *path;
 	if (!PyArg_ParseTuple (args, "s", &path)) return nullptr;
 
+	if (path_check_file_exists (path)) path_delete_file (path);
 	self->real->write (path, self->real->signature, self->real->flags, false, false);
 
 	Py_RETURN_NONE;

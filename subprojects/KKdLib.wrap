@@ -1,4 +1,4 @@
 [wrap-git]
 url = https://github.com/vixen256/KKdLib.git
-revision = 2bfd218f18d8b2848cfa18af1837faa773187fdc
+revision = master
 diff_files = KKdLib.patch
