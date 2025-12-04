@@ -394,15 +394,16 @@ py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 		for (i32 i = 0; i < mipmap.height; i += 4) {
 			i32 remainHeight = std::min<i32> (4, mipmap.height - i);
 			for (i32 j = 0; j < mipmap.width; j += 4) {
-				i32 remainWidth = std::min<i32> (4, mipmap.width - i);
+				i32 remainWidth = std::min<i32> (4, mipmap.width - j);
 
 				HDRColorA color[16] = {};
 				for (i32 h = 0; h < remainHeight; h++) {
 					for (i32 w = 0; w < remainWidth; w++) {
-						color[h * 4 + w].r = (f32)(*(u8 *)(data + ((i + h) * mipmap.width + j + w) * 4 + 0)) / 255.0;
-						color[h * 4 + w].g = (f32)(*(u8 *)(data + ((i + h) * mipmap.width + j + w) * 4 + 1)) / 255.0;
-						color[h * 4 + w].b = (f32)(*(u8 *)(data + ((i + h) * mipmap.width + j + w) * 4 + 2)) / 255.0;
-						color[h * 4 + w].a = (f32)(*(u8 *)(data + ((i + h) * mipmap.width + j + w) * 4 + 3)) / 255.0;
+						u64 pxOffset       = ((i + h) * mipmap.width + j + w) * 4;
+						color[h * 4 + w].r = (f32)(*(u8 *)(data + pxOffset + 0)) / 255.0;
+						color[h * 4 + w].g = (f32)(*(u8 *)(data + pxOffset + 1)) / 255.0;
+						color[h * 4 + w].b = (f32)(*(u8 *)(data + pxOffset + 2)) / 255.0;
+						color[h * 4 + w].a = (f32)(*(u8 *)(data + pxOffset + 3)) / 255.0;
 					}
 				}
 
@@ -512,13 +513,14 @@ py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 		for (i32 i = 0; i < ya_mipmap.height; i += 4) {
 			i32 remainHeight = std::min<i32> (4, ya_mipmap.height - i);
 			for (i32 j = 0; j < ya_mipmap.width; j += 4) {
-				i32 remainWidth = std::min<i32> (4, ya_mipmap.width - i);
+				i32 remainWidth = std::min<i32> (4, ya_mipmap.width - j);
 
 				XMFLOAT2 color[16] = {0.0};
 				for (i32 h = 0; h < remainHeight; h++) {
 					for (i32 w = 0; w < remainWidth; w++) {
-						color[h * 4 + w].x = (f32)(*(u8 *)(ya_data + ((i + h) * ya_mipmap.width + j + w) * 2 + 0)) / 255.0;
-						color[h * 4 + w].y = (f32)(*(u8 *)(ya_data + ((i + h) * ya_mipmap.width + j + w) * 2 + 1)) / 255.0;
+						u64 pxOffset       = ((i + h) * ya_mipmap.width + j + w) * 2;
+						color[h * 4 + w].x = (f32)(*(u8 *)(ya_data + pxOffset + 0)) / 255.0;
+						color[h * 4 + w].y = (f32)(*(u8 *)(ya_data + pxOffset + 1)) / 255.0;
 					}
 				}
 
@@ -537,13 +539,14 @@ py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 		for (i32 i = 0; i < ya_mipmap.height; i += 8) {
 			i32 remainHeight = std::min<i32> (8, ya_mipmap.height - i);
 			for (i32 j = 0; j < ya_mipmap.width; j += 8) {
-				i32 remainWidth = std::min<i32> (8, ya_mipmap.width - i);
+				i32 remainWidth = std::min<i32> (8, ya_mipmap.width - j);
 
 				f32 color[8][8][2] = {0.5};
 				for (i32 h = 0; h < remainHeight; h++) {
 					for (i32 w = 0; w < remainWidth; w++) {
-						color[h][w][0] = (f32)(*(u8 *)(cbcr_data + ((i + h) * ya_mipmap.width + j + w) * 2 + 0)) / 255.0;
-						color[h][w][1] = (f32)(*(u8 *)(cbcr_data + ((i + h) * ya_mipmap.width + j + w) * 2 + 1)) / 255.0;
+						u64 pxOffset   = ((i + h) * ya_mipmap.width + j + w) * 2;
+						color[h][w][0] = (f32)(*(u8 *)(cbcr_data + pxOffset + 0)) / 255.0;
+						color[h][w][1] = (f32)(*(u8 *)(cbcr_data + pxOffset + 1)) / 255.0;
 					}
 				}
 
@@ -625,15 +628,16 @@ py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 		for (i32 i = 0; i < mipmap.height; i += 4) {
 			i32 remainHeight = std::min<i32> (4, mipmap.height - i);
 			for (i32 j = 0; j < mipmap.width; j += 4) {
-				i32 remainWidth = std::min<i32> (4, mipmap.width - i);
+				i32 remainWidth = std::min<i32> (4, mipmap.width - j);
 
 				HDRColorA *color = (HDRColorA *)calloc (16, sizeof (HDRColorA));
 				for (i32 h = 0; h < remainHeight; h++) {
 					for (i32 w = 0; w < remainWidth; w++) {
-						color[h * 4 + w].r = (f32)(*(u8 *)(data + ((i + h) * mipmap.width + j + w) * 4 + 0)) / 255.0;
-						color[h * 4 + w].g = (f32)(*(u8 *)(data + ((i + h) * mipmap.width + j + w) * 4 + 1)) / 255.0;
-						color[h * 4 + w].b = (f32)(*(u8 *)(data + ((i + h) * mipmap.width + j + w) * 4 + 2)) / 255.0;
-						color[h * 4 + w].a = (f32)(*(u8 *)(data + ((i + h) * mipmap.width + j + w) * 4 + 3)) / 255.0;
+						u64 pxOffset       = ((i + h) * mipmap.width + j + w) * 4;
+						color[h * 4 + w].r = (f32)(*(u8 *)(data + pxOffset + 0)) / 255.0;
+						color[h * 4 + w].g = (f32)(*(u8 *)(data + pxOffset + 1)) / 255.0;
+						color[h * 4 + w].b = (f32)(*(u8 *)(data + pxOffset + 2)) / 255.0;
+						color[h * 4 + w].a = (f32)(*(u8 *)(data + pxOffset + 3)) / 255.0;
 					}
 				}
 
