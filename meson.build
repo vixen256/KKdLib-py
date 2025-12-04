@@ -19,6 +19,7 @@ add_project_arguments(
 add_project_link_arguments(
 	cpp.get_supported_arguments(
 		'-s',
+		'-static',
 		'-std=c++26',
 		'-O3',
 	),
