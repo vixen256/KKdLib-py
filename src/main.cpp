@@ -539,18 +539,22 @@ py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 			for (i32 j = 0; j < ya_mipmap.width; j += 8) {
 				i32 remainWidth = std::min<i32> (8, ya_mipmap.width - i);
 
-				f32 color[64][2] = {0.5};
+				f32 color[8][8][2] = {0.5};
 				for (i32 h = 0; h < remainHeight; h++) {
 					for (i32 w = 0; w < remainWidth; w++) {
-						color[h * 8 + w][0] = (f32)(*(u8 *)(cbcr_data + ((i + h) * ya_mipmap.width + j + w) * 2 + 0)) / 255.0;
-						color[h * 8 + w][1] = (f32)(*(u8 *)(cbcr_data + ((i + h) * ya_mipmap.width + j + w) * 2 + 1)) / 255.0;
+						color[h][w][0] = (f32)(*(u8 *)(cbcr_data + ((i + h) * ya_mipmap.width + j + w) * 2 + 0)) / 255.0;
+						color[h][w][1] = (f32)(*(u8 *)(cbcr_data + ((i + h) * ya_mipmap.width + j + w) * 2 + 1)) / 255.0;
 					}
 				}
 
 				XMFLOAT2 temp[16];
-				for (i32 i = 0; i < 16; i++) {
-					temp[i].x = (color[i * 4 + 0][0] + color[i * 4 + 1][0] + color[i * 4 + 2][0] + color[i * 4 + 3][0]) / 4.0;
-					temp[i].y = (color[i * 4 + 0][1] + color[i * 4 + 1][1] + color[i * 4 + 2][1] + color[i * 4 + 3][1]) / 4.0;
+				for (i32 h = 0; h < 4; h++) {
+					for (i32 w = 0; w < 4; w++) {
+						temp[h * 4 + w].x =
+						    (color[h * 2][w * 2][0] + color[h * 2][w * 2 + 1][0] + color[h * 2 + 1][w * 2][0] + color[h * 2 + 1][w * 2 + 1][0]) / 4.0;
+						temp[h * 4 + w].y =
+						    (color[h * 2][w * 2][1] + color[h * 2][w * 2 + 1][1] + color[h * 2 + 1][w * 2][1] + color[h * 2 + 1][w * 2 + 1][1]) / 4.0;
+					}
 				}
 				D3DXEncodeBC5U (dest, temp);
 				dest += 16;
@@ -623,7 +627,7 @@ py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 			for (i32 j = 0; j < mipmap.width; j += 4) {
 				i32 remainWidth = std::min<i32> (4, mipmap.width - i);
 
-				HDRColorA *color = (HDRColorA *)calloc (sizeof (HDRColorA), 16);
+				HDRColorA *color = (HDRColorA *)calloc (16, sizeof (HDRColorA));
 				for (i32 h = 0; h < remainHeight; h++) {
 					for (i32 w = 0; w < remainWidth; w++) {
 						color[h * 4 + w].r = (f32)(*(u8 *)(data + ((i + h) * mipmap.width + j + w) * 4 + 0)) / 255.0;
@@ -633,7 +637,7 @@ py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 					}
 				}
 
-				thread_pool.push_back (std::thread (D3DXEncodeBC7, dest, color, BC_FLAGS_DITHER_RGB | BC_FLAGS_DITHER_A));
+				thread_pool.push_back (std::thread (D3DXEncodeBC7, dest, color, 0));
 				ptrs.push_back (color);
 				dest += 16;
 			}
