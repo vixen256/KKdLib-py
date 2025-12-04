@@ -21,6 +21,7 @@ add_project_link_arguments(
 		'-s',
 		'-static-libgcc',
 		'-static-libstdc++',
+		'-pthread',
 		'-std=c++26',
 		'-O3',
 	),
