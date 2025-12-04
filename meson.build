@@ -21,15 +21,23 @@ add_project_link_arguments(
 		'-s',
 		'-static-libgcc',
 		'-static-libstdc++',
-		'-Wl,-Bstatic',
-		'-lstdc++',
-		'-lpthread',
-		'-Wl,-Bdynamic',
 		'-std=c++26',
 		'-O3',
 	),
 	language: 'cpp',
 )
+
+if target_machine.system() == 'windows'
+	add_project_link_arguments(
+		cpp.get_supported_arguments(
+			'-Wl,-Bstatic',
+			'-lstdc++',
+			'-lpthread',
+			'-Wl,-Bdynamic',
+		),
+		language: 'cpp',
+	)
+endif
 
 kkdlib = subproject('KKdLib')
 
