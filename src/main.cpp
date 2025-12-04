@@ -562,6 +562,93 @@ py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 		texture.mipmaps_count = 2;
 		texture.mipmaps.push_back (ya_mipmap);
 		texture.mipmaps.push_back (cbcr_mipmap);
+	} else if (strcmp (format, "BC7") == 0) {
+		PyObject *iter = PyObject_GetIter (image_data);
+		if (!iter) return nullptr;
+		u8 *data = (u8 *)malloc (PyLong_AsLong (width) * PyLong_AsLong (height) * 4);
+		u64 i    = 0;
+
+		PyObject *bytes = PyUnicode_AsUTF8String (mode);
+		if (strcmp (PyBytes_AsString (bytes), "RGB") == 0) {
+			while (PyObject *item = PyIter_Next (iter)) {
+				u8 r = PyLong_AsLong (PyTuple_GetItem (item, 0));
+				u8 g = PyLong_AsLong (PyTuple_GetItem (item, 1));
+				u8 b = PyLong_AsLong (PyTuple_GetItem (item, 2));
+
+				data[i * 4 + 0] = r;
+				data[i * 4 + 1] = g;
+				data[i * 4 + 2] = b;
+				data[i * 4 + 3] = 255;
+
+				i++;
+				Py_DECREF (item);
+			}
+		} else if (strcmp (PyBytes_AsString (bytes), "RGBA") == 0) {
+			while (PyObject *item = PyIter_Next (iter)) {
+				u8 r = PyLong_AsLong (PyTuple_GetItem (item, 0));
+				u8 g = PyLong_AsLong (PyTuple_GetItem (item, 1));
+				u8 b = PyLong_AsLong (PyTuple_GetItem (item, 2));
+				u8 a = PyLong_AsLong (PyTuple_GetItem (item, 3));
+
+				data[i * 4 + 0] = r;
+				data[i * 4 + 1] = g;
+				data[i * 4 + 2] = b;
+				data[i * 4 + 3] = a;
+
+				i++;
+				Py_DECREF (item);
+			}
+		} else {
+			PyErr_SetString (PyExc_RuntimeError, "Image mode must be RGB or RGBA");
+			return nullptr;
+		}
+
+		Py_DECREF (bytes);
+		Py_DECREF (iter);
+
+		txp_mipmap mipmap;
+
+		mipmap.width  = PyLong_AsLong (width);
+		mipmap.height = PyLong_AsLong (height);
+		mipmap.format = (txp_format)15; // BC7
+		mipmap.size   = mipmap.width * mipmap.height;
+		mipmap.data.resize (mipmap.size);
+
+		u8 *dest = mipmap.data.data ();
+		std::vector<std::thread> thread_pool;
+		std::vector<HDRColorA *> ptrs;
+
+		for (i32 i = 0; i < mipmap.height; i += 4) {
+			i32 remainHeight = std::min<i32> (4, mipmap.height - i);
+			for (i32 j = 0; j < mipmap.width; j += 4) {
+				i32 remainWidth = std::min<i32> (4, mipmap.width - i);
+
+				HDRColorA *color = (HDRColorA *)calloc (sizeof (HDRColorA), 16);
+				for (i32 h = 0; h < remainHeight; h++) {
+					for (i32 w = 0; w < remainWidth; w++) {
+						color[h * 4 + w].r = (f32)(*(u8 *)(data + ((i + h) * mipmap.width + j + w) * 4 + 0)) / 255.0;
+						color[h * 4 + w].g = (f32)(*(u8 *)(data + ((i + h) * mipmap.width + j + w) * 4 + 1)) / 255.0;
+						color[h * 4 + w].b = (f32)(*(u8 *)(data + ((i + h) * mipmap.width + j + w) * 4 + 2)) / 255.0;
+						color[h * 4 + w].a = (f32)(*(u8 *)(data + ((i + h) * mipmap.width + j + w) * 4 + 3)) / 255.0;
+					}
+				}
+
+				thread_pool.push_back (std::thread (D3DXEncodeBC7, dest, color, BC_FLAGS_DITHER_RGB | BC_FLAGS_DITHER_A));
+				ptrs.push_back (color);
+				dest += 16;
+			}
+		}
+
+		for (auto &t : thread_pool)
+			t.join ();
+
+		for (auto ptr : ptrs)
+			free (ptr);
+
+		texture.has_cube_map  = false;
+		texture.array_size    = 1;
+		texture.mipmaps_count = 1;
+		texture.mipmaps.push_back (mipmap);
 	} else {
 		PyErr_SetString (PyExc_RuntimeError, "Unknown pixel format");
 		return nullptr;

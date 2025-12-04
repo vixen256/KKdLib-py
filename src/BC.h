@@ -18,6 +18,100 @@ struct alignas (16) XMFLOAT2 {
 	f32 y;
 };
 
+constexpr int32_t BC67_WEIGHT_MAX    = 64;
+constexpr uint32_t BC67_WEIGHT_SHIFT = 6;
+constexpr int32_t BC67_WEIGHT_ROUND  = 32;
+
+const int g_aWeights2[] = {0, 21, 43, 64};
+const int g_aWeights3[] = {0, 9, 18, 27, 37, 46, 55, 64};
+const int g_aWeights4[] = {0, 4, 9, 13, 17, 21, 26, 30, 34, 38, 43, 47, 51, 55, 60, 64};
+
+class LDRColorA {
+public:
+	uint8_t r, g, b, a;
+
+	const uint8_t &operator[] (size_t uElement) const noexcept {
+		switch (uElement) {
+		case 0: return r;
+		case 1: return g;
+		case 2: return b;
+		case 3: return a;
+		default: assert (false); return r;
+		}
+	}
+
+	uint8_t &operator[] (size_t uElement) noexcept {
+		switch (uElement) {
+		case 0: return r;
+		case 1: return g;
+		case 2: return b;
+		case 3: return a;
+		default: assert (false); return r;
+		}
+	}
+
+	static void InterpolateRGB (const LDRColorA &c0, const LDRColorA &c1, size_t wc, size_t wcprec, LDRColorA &out) noexcept {
+		const int *aWeights = nullptr;
+		switch (wcprec) {
+		case 2:
+			aWeights = g_aWeights2;
+			assert (wc < 4);
+			break;
+		case 3:
+			aWeights = g_aWeights3;
+			assert (wc < 8);
+			break;
+		case 4:
+			aWeights = g_aWeights4;
+			assert (wc < 16);
+			break;
+		default:
+			assert (false);
+			out.r = out.g = out.b = 0;
+			return;
+		}
+		out.r =
+		    uint8_t ((uint32_t (c0.r) * uint32_t (BC67_WEIGHT_MAX - aWeights[wc]) + uint32_t (c1.r) * uint32_t (aWeights[wc]) + BC67_WEIGHT_ROUND) >>
+		             BC67_WEIGHT_SHIFT);
+		out.g =
+		    uint8_t ((uint32_t (c0.g) * uint32_t (BC67_WEIGHT_MAX - aWeights[wc]) + uint32_t (c1.g) * uint32_t (aWeights[wc]) + BC67_WEIGHT_ROUND) >>
+		             BC67_WEIGHT_SHIFT);
+		out.b =
+		    uint8_t ((uint32_t (c0.b) * uint32_t (BC67_WEIGHT_MAX - aWeights[wc]) + uint32_t (c1.b) * uint32_t (aWeights[wc]) + BC67_WEIGHT_ROUND) >>
+		             BC67_WEIGHT_SHIFT);
+	}
+
+	static void InterpolateA (const LDRColorA &c0, const LDRColorA &c1, size_t wa, size_t waprec, LDRColorA &out) noexcept {
+		const int *aWeights = nullptr;
+		switch (waprec) {
+		case 2:
+			aWeights = g_aWeights2;
+			assert (wa < 4);
+			break;
+		case 3:
+			aWeights = g_aWeights3;
+			assert (wa < 8);
+			break;
+		case 4:
+			aWeights = g_aWeights4;
+			assert (wa < 16);
+			break;
+		default:
+			assert (false);
+			out.a = 0;
+			return;
+		}
+		out.a =
+		    uint8_t ((uint32_t (c0.a) * uint32_t (BC67_WEIGHT_MAX - aWeights[wa]) + uint32_t (c1.a) * uint32_t (aWeights[wa]) + BC67_WEIGHT_ROUND) >>
+		             BC67_WEIGHT_SHIFT);
+	}
+
+	static void Interpolate (const LDRColorA &c0, const LDRColorA &c1, size_t wc, size_t wa, size_t wcprec, size_t waprec, LDRColorA &out) noexcept {
+		InterpolateRGB (c0, c1, wc, wcprec, out);
+		InterpolateA (c0, c1, wa, waprec, out);
+	}
+};
+
 struct alignas (16) HDRColorA {
 	f32 r;
 	f32 g;
@@ -32,7 +126,76 @@ struct alignas (16) HDRColorA {
 
 	HDRColorA (HDRColorA &&)            = default;
 	HDRColorA &operator= (HDRColorA &&) = default;
+
+	HDRColorA (LDRColorA c) {
+		r = c.r;
+		g = c.g;
+		b = c.b;
+		a = c.a;
+	}
+
+	HDRColorA operator+ (const HDRColorA &c) const noexcept { return HDRColorA (r + c.r, g + c.g, b + c.b, a + c.a); }
+
+	HDRColorA operator- (const HDRColorA &c) const noexcept { return HDRColorA (r - c.r, g - c.g, b - c.b, a - c.a); }
+
+	HDRColorA operator* (float f) const noexcept { return HDRColorA (r * f, g * f, b * f, a * f); }
+
+	HDRColorA operator/ (float f) const noexcept {
+		const float fInv = 1.0f / f;
+		return HDRColorA (r * fInv, g * fInv, b * fInv, a * fInv);
+	}
+
+	float operator* (const HDRColorA &c) const noexcept { return r * c.r + g * c.g + b * c.b + a * c.a; }
+
+	HDRColorA &operator+= (const HDRColorA &c) noexcept {
+		r += c.r;
+		g += c.g;
+		b += c.b;
+		a += c.a;
+		return *this;
+	}
+
+	HDRColorA &operator-= (const HDRColorA &c) noexcept {
+		r -= c.r;
+		g -= c.g;
+		b -= c.b;
+		a -= c.a;
+		return *this;
+	}
+
+	HDRColorA &operator*= (float f) noexcept {
+		r *= f;
+		g *= f;
+		b *= f;
+		a *= f;
+		return *this;
+	}
+
+	HDRColorA &operator/= (float f) noexcept {
+		const float fInv = 1.0f / f;
+		r *= fInv;
+		g *= fInv;
+		b *= fInv;
+		a *= fInv;
+		return *this;
+	}
+
+	HDRColorA &Clamp (_In_ float fMin, _In_ float fMax) noexcept {
+		r = std::min<float> (fMax, std::max<float> (fMin, r));
+		g = std::min<float> (fMax, std::max<float> (fMin, g));
+		b = std::min<float> (fMax, std::max<float> (fMin, b));
+		a = std::min<float> (fMax, std::max<float> (fMin, a));
+		return *this;
+	}
+
+	LDRColorA ToLDRColorA () const noexcept;
 };
+
+inline LDRColorA
+HDRColorA::ToLDRColorA () const noexcept {
+	return LDRColorA (static_cast<uint8_t> (r + 0.01f), static_cast<uint8_t> (g + 0.01f), static_cast<uint8_t> (b + 0.01f),
+	                  static_cast<uint8_t> (a + 0.01f));
+}
 
 inline HDRColorA *
 HDRColorALerp (HDRColorA *pOut, const HDRColorA *pC1, const HDRColorA *pC2, f32 s) noexcept {
@@ -167,3 +330,4 @@ OptimizeAlpha (float *pX, float *pY, const float *pPoints, uint32_t cSteps) noex
 
 void D3DXEncodeBC3 (u8 *pBC, const HDRColorA *pColor, uint32_t flags) noexcept;
 void D3DXEncodeBC5U (u8 *pBC, const XMFLOAT2 *pColor) noexcept;
+void D3DXEncodeBC7 (u8 *pBC, const HDRColorA *pColor, uint32_t flags) noexcept;

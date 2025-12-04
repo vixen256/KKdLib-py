@@ -38,6 +38,7 @@ py.extension_module(
 	sources : [
 		'src/BC3.cpp',
 		'src/BC5.cpp',
+		'src/BC7.cpp',
 		'src/main.cpp',
 	],
 	install: true,

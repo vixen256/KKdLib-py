@@ -10,7 +10,6 @@
 //-------------------------------------------------------------------------------------
 
 #include "BC.h"
-#include "helpers.h"
 
 #define BLOCK_LEN            4
 #define BLOCK_SIZE           (BLOCK_LEN * BLOCK_LEN)
