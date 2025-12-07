@@ -420,6 +420,8 @@ py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 		PyObject *iter = PyObject_GetIter (image_data);
 		if (!iter) return nullptr;
 
+		const f32 cbcr_add     = 128.5019;
+		const f32 cbcr_div     = 256.0001 / 255.0;
 		const __m128 matrix_y  = {0.212593317f, 0.715214610f, 0.0721921176f, 1.0f};
 		const __m128 matrix_cb = {-0.114568502f, -0.385435730f, 0.5000042320f, 1.0f};
 		const __m128 matrix_cr = {0.500004232f, -0.454162151f, -0.0458420813f, 1.0f};
@@ -437,7 +439,7 @@ py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 				u8 a  = PyLong_AsLong (PyTuple_GetItem (item, 3));
 
 #ifdef __x86_64__
-				__m128 rgb  = {r, g, b, 128.5};
+				__m128 rgb  = {r, g, b, cbcr_add};
 				__m128 y    = _mm_mul_ps (rgb, matrix_y);
 				__m128 cb   = _mm_mul_ps (rgb, matrix_cb);
 				__m128 cr   = _mm_mul_ps (rgb, matrix_cr);
@@ -445,17 +447,17 @@ py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 
 				ya_data[i * 2 + 0]   = y[0] + y[1] + y[2];
 				ya_data[i * 2 + 1]   = a;
-				cbcr_data[i * 2 + 0] = (cbcr[0] + cbcr[1]) / 1.003922f;
-				cbcr_data[i * 2 + 1] = (cbcr[2] + cbcr[3]) / 1.003922f;
+				cbcr_data[i * 2 + 0] = (cbcr[0] + cbcr[1]) / cbcr_div;
+				cbcr_data[i * 2 + 1] = (cbcr[2] + cbcr[3]) / cbcr_div;
 #else
 				f32 y  = r * 0.212593317f + g * 0.715214610f + b * 0.0721921176f;
-				f32 cb = (r * -0.114568502f + g * -0.385435730f + b * 0.5000042320f + 128.5f) / 1.003922f;
-				f32 cr = (r * 0.500004232f + g * -0.454162151f + b * -0.0458420813f + 128.5f) / 1.003922f;
+				f32 cb = (r * -0.114568502f + g * -0.385435730f + b * 0.5000042320f + cbcr_add) / cbcr_div;
+				f32 cr = (r * 0.500004232f + g * -0.454162151f + b * -0.0458420813f + cbcr_add) / cbcr_div;
 
-				ya_data[i * 2 + 0]   = y[0] + y[1] + y[2];
+				ya_data[i * 2 + 0]   = y;
 				ya_data[i * 2 + 1]   = a;
-				cbcr_data[i * 2 + 0] = (cbcr[0] + cbcr[1]) / 1.003922f;
-				cbcr_data[i * 2 + 1] = (cbcr[2] + cbcr[3]) / 1.003922f;
+				cbcr_data[i * 2 + 0] = cb;
+				cbcr_data[i * 2 + 1] = cr;
 #endif
 
 				i++;
@@ -469,7 +471,7 @@ py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 				f32 b = PyLong_AsLong (PyTuple_GetItem (item, 2));
 
 #ifdef __x86_64__
-				__m128 rgb  = {r, g, b, 128.5};
+				__m128 rgb  = {r, g, b, cbcr_add};
 				__m128 y    = _mm_mul_ps (rgb, matrix_y);
 				__m128 cb   = _mm_mul_ps (rgb, matrix_cb);
 				__m128 cr   = _mm_mul_ps (rgb, matrix_cr);
@@ -477,17 +479,17 @@ py_txp_set_add_texture_pillow (pyobject_txp_set *self, PyObject *args) {
 
 				ya_data[i * 2 + 0]   = y[0] + y[1] + y[2];
 				ya_data[i * 2 + 1]   = 255;
-				cbcr_data[i * 2 + 0] = (cbcr[0] + cbcr[1]) / 1.003922f;
-				cbcr_data[i * 2 + 1] = (cbcr[2] + cbcr[3]) / 1.003922f;
+				cbcr_data[i * 2 + 0] = (cbcr[0] + cbcr[1]) / cbcr_div;
+				cbcr_data[i * 2 + 1] = (cbcr[2] + cbcr[3]) / cbcr_div;
 #else
 				f32 y  = r * 0.212593317f + g * 0.715214610f + b * 0.0721921176f;
-				f32 cb = (r * -0.114568502f + g * -0.385435730f + b * 0.5000042320f + 128.5f) / 1.003922f;
-				f32 cr = (r * 0.500004232f + g * -0.454162151f + b * -0.0458420813f + 128.5f) / 1.003922f;
+				f32 cb = (r * -0.114568502f + g * -0.385435730f + b * 0.5000042320f + cbcr_add) / cbcr_div;
+				f32 cr = (r * 0.500004232f + g * -0.454162151f + b * -0.0458420813f + cbcr_add) / cbcr_div;
 
-				ya_data[i * 2 + 0]   = y[0] + y[1] + y[2];
+				ya_data[i * 2 + 0]   = y;
 				ya_data[i * 2 + 1]   = 255;
-				cbcr_data[i * 2 + 0] = (cbcr[0] + cbcr[1]) / 1.003922f;
-				cbcr_data[i * 2 + 1] = (cbcr[2] + cbcr[3]) / 1.003922f;
+				cbcr_data[i * 2 + 0] = cb;
+				cbcr_data[i * 2 + 1] = cr;
 #endif
 
 				i++;
