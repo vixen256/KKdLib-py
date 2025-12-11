@@ -2,3 +2,4 @@
 url = https://github.com/vixen256/KKdLib.git
 revision = master
 diff_files = KKdLib.patch
+clone-recursive = true
