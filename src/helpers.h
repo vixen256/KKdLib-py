@@ -9,7 +9,11 @@
 #include <cpuid.h>
 #endif
 
-#include <bits/stdc++.h>
+#include <algorithm>
+#include <string>
+#include <thread>
+#include <vector>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
