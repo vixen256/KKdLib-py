@@ -5,10 +5,6 @@
 #include <Python.h>
 #include <structmember.h>
 
-#if defined(__x86_64__)
-#include <cpuid.h>
-#endif
-
 #include <algorithm>
 #include <string>
 #include <thread>
