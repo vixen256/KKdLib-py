@@ -1034,19 +1034,7 @@ static PyModuleDef KKdLib_module = {
     .m_slots = KKdLib_module_slots,
 };
 
-// KKdLib AES requirement
-bool cpu_caps_aes_ni = false;
-
 PyMODINIT_FUNC
 PyInit_KKdLib () {
-#ifdef __x86_64__
-	u32 cpuid_eax = 1;
-	u32 cpuid_ebx = 0;
-	u32 cpuid_ecx = 0;
-	u32 cpuid_edx = 0;
-	__get_cpuid (1, &cpuid_eax, &cpuid_ebx, &cpuid_ecx, &cpuid_edx);
-	cpu_caps_aes_ni = !!(cpuid_ecx & (1 << 25));
-#endif
-
 	return PyModuleDef_Init (&KKdLib_module);
 }
